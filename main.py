@@ -32,12 +32,11 @@ def load_vgg(sess, vgg_path):
     vgg_layer3_out_tensor_name = 'layer3_out:0'
     vgg_layer4_out_tensor_name = 'layer4_out:0'
     vgg_layer7_out_tensor_name = 'layer7_out:0'
-    
-    
+
     tf.saved_model.loader.load(sess, [vgg_tag], vgg_path)
     g = sess.graph
-     
-    # print(sess.graph_def)   
+
+    # print(sess.graph_def)
     image_input = g.get_tensor_by_name(vgg_input_tensor_name)
     keep_prob = g.get_tensor_by_name(vgg_keep_prob_tensor_name)
     layer3_out = g.get_tensor_by_name(vgg_layer3_out_tensor_name)
@@ -48,10 +47,6 @@ def load_vgg(sess, vgg_path):
 
 tests.test_load_vgg(load_vgg, tf)
 
-#def custom_init(shape, dtype=tf.float32, partition_info=None, seed=0):
-#    return tf.truncated_normal(shape, dtype=dtype, stddev = 0.01, seed=seed)
-
-#def conv_1x1(x, num_outputs, activation = tf.nn.relu):
 def conv_1x1(x, num_outputs, activation = None):
     """
     Perform a 1x1 convolution 
@@ -67,14 +62,17 @@ def conv_1x1(x, num_outputs, activation = None):
         strides = (1,1),
         padding = 'SAME',
         activation = activation,  # TODO: test different activations
-        kernel_initializer = initializer)
+        kernel_initializer = initializer,
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.01)
+    )
 
-def upsample(x,filters,kernel_size,strides):    
+def upsample(x,filters,kernel_size,strides):
     """
     Apply a two times upsample on x and return the result.
     :x: 4-Rank Tensor
     :return: TF Operation
     """
+
     initializer = tf.truncated_normal_initializer(stddev=0.01)
     return tf.layers.conv2d_transpose(x,filters,kernel_size, strides,padding = 'SAME', kernel_initializer = initializer)
 
@@ -99,34 +97,9 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     layer4_up = upsample(layer4_skip,num_classes,5,2)
     layer3_skip = tf.add(layer4_up,layer3_1x1)
 
-    layer3_up = upsample(layer3_skip, num_classes,16,8)
+    output = upsample(layer3_skip, num_classes,16,8)
 
-    return layer3_up
-
-
-#    init = tf.truncated_normal_initializer(stddev = 0.01)
-#    def conv_1x1(x, num_classes, init = init):
-#        return tf.layers.conv2d(x, num_classes, 1, padding = 'same', kernel_initializer = init)
-#
-#    def upsample(x, num_classes, depth, strides, init = init):
-#        return tf.layers.conv2d_transpose(x, num_classes, depth, strides, padding = 'same', kernel_initializer = init)
-#
-#    layer_7_1x1 = conv_1x1(vgg_layer7_out, num_classes)
-#    layer_4_1x1 = conv_1x1(vgg_layer4_out, num_classes)
-#    layer_3_1x1 = conv_1x1(vgg_layer3_out, num_classes)
-#
-#    upsample1 = upsample(layer_7_1x1, num_classes, 5, 2)
-#    layer1 = tf.layers.batch_normalization(upsample1)
-#    layer1 = tf.add(layer1, layer_4_1x1)
-#
-#
-#    upsample2 = upsample(layer1, num_classes, 5, 2)
-#    layer2 = tf.layers.batch_normalization(upsample2)
-#    layer2 = tf.add(layer2, layer_3_1x1)
-#
-#
-#    return upsample(layer2, num_classes, 14, 8)
-
+    return output
 
 
 tests.test_layers(layers)
@@ -147,9 +120,14 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels = labels,logits = logits))
 
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate,beta1=0.9,beta2=0.999,epsilon=1e-08,use_locking=False,name='Adam')
-    train_op = optimizer.minimize(loss=cross_entropy_loss)
 
-    return logits, train_op, cross_entropy_loss
+    reg_const = 0.01
+    reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    loss = cross_entropy_loss + reg_const * sum(reg_losses)
+
+    train_op = optimizer.minimize(loss=loss)
+
+    return logits, train_op, loss
 
 tests.test_optimize(optimize)
 
@@ -174,8 +152,6 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
 
     for epoch_i in range(epochs):
         
-    # Progress bar
-    #batches_pbar = tqdm(range(batch_count), desc='Epoch {:>2}/{}'.format(epoch_i+1, epochs), unit='batches')
         counter = 1
         for images, correct_labels in get_batches_fn(batch_size):
 
@@ -196,14 +172,14 @@ def run():
     num_classes = 2
     image_shape = (160, 576)
     
-    epochs = 12
-    batch_size = 13
+    epochs = 300
+    batch_size = 10
 
     data_dir = './data'
     runs_dir = './runs'
-    #model_path ='./tmp/fcn.ckpt'
+    model_path ='./tmp/fcn.ckpt'
     #model_path ='./tmp/fcn_e20_b13.ckpt'
-    model_path ='./tmp/fcn_e20_b13_linear.ckpt'
+    #model_path ='./tmp/fcn_e20_b13_linear.ckpt'
     tests.test_for_kitti_dataset(data_dir)
 
     # Download pretrained vgg model
@@ -241,11 +217,6 @@ def run():
 
         save_path = saver.save(sess, model_path)
         print("Model saved in file: %s" % save_path)
-
-#        print("nn_last_layer.get_shape()",nn_last_layer.get_shape())
-
-#        out = sess.run(nn_last_layer,feed_dict = {input_image: images,keep_prob: 0.5})
-
 
         # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
