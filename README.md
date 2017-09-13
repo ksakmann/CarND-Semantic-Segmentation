@@ -20,7 +20,7 @@ Some of the results are shown below:
 
 A sample video can be found here
 
-![sample][video1]
+[project_video](./images/project_video.mp4)
 
 ### Setup
 ##### Frameworks and Packages
