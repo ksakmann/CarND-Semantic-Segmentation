@@ -1,6 +1,8 @@
 # Semantic Segmentation
 ### Introduction
 In this project the pixels of a road in images are labelled using a Fully Convolutional Network (FCN).
+The network uses the architecture described in [Long et al.](https://people.eecs.berkeley.edu/~jonlong/long_shelhamer_fcn.pdf)
+and is trained on the [Kitti Road dataset](http://www.cvlibs.net/datasets/kitti/eval_road.php).
 
 [//]: # (Image References)
 [image1]: ./images/um_000032.png
@@ -17,10 +19,8 @@ Some of the results are shown below:
 ![sample][image3]
 ![sample][image4]
 
-
-A sample video can be found here
-
-[project_video](./images/project_video.mp4)
+The code performs a hapyerparameter search using 200 epochs for training.
+A test of the trained network on road conditions very different to the training data can be found here [project_video](./images/project_video.mp4)
 
 ### Setup
 ##### Frameworks and Packages
