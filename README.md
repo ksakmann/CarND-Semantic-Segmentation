@@ -1,6 +1,24 @@
 # Semantic Segmentation
 ### Introduction
-In this project, you'll label the pixels of a road in images using a Fully Convolutional Network (FCN).
+In this project the pixels of a road in images are labelled using a Fully Convolutional Network (FCN).
+
+[//]: # (Image References)
+[image1]: ./images/um_000032.png
+[image2]: ./images/um_000093.png
+[image3]: ./images/umm_000032.png
+[image4]: ./images/umm_000063.png
+[image5]: ./images/uu_000082.png
+[video1]: ./images/project_video.mp4
+
+Some of the results are shown below:
+![sample][image1]
+![sample][image2]
+![sample][image3]
+![sample][image4]
+
+
+A sample video can be found here
+![sample][video1]
 
 ### Setup
 ##### Frameworks and Packages
@@ -13,9 +31,6 @@ Make sure you have the following is installed:
 Download the [Kitti Road dataset](http://www.cvlibs.net/datasets/kitti/eval_road.php) from [here](http://www.cvlibs.net/download.php?file=data_road.zip).  Extract the dataset in the `data` folder.  This will create the folder `data_road` with all the training a test images.
 
 ### Start
-##### Implement
-Implement the code in the `main.py` module indicated by the "TODO" comments.
-The comments indicated with "OPTIONAL" tag are not required to complete.
 ##### Run
 Run the following command to run the project:
 ```
