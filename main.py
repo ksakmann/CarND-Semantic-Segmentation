@@ -188,12 +188,10 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
 
     counter = 1
     for epoch_i in range(epochs):
-        
 
         for images, correct_labels in get_batches_fn(batch_size):
 
             if counter % 10 == 0:
-                print("loss", loss, " epoch_i ", epoch_i, " epochs ", epochs)
 
                 # Run optimizer and get loss
                 _, loss,s = sess.run([train_op, cross_entropy_loss,summ],
@@ -201,6 +199,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                                               correct_label: correct_labels,
                                               keep_prob: kprob,
                                               learning_rate: lrate})
+                print("loss", loss, " epoch_i ", epoch_i, " epochs ", epochs)
                 writer.add_summary(s, counter)
 
             else:
@@ -228,58 +227,62 @@ def run():
     # Download pretrained vgg model
     helper.maybe_download_pretrained_vgg(data_dir)
 
-    epochs = 6
-    batch_size = 10
-    kprob = 0.8
-#    lrate = 0.001
-#    l2_const = 0.01
+    epochs = 200
+    batch_size = 16
+
+    #do_inference_only = True
+
+    # CAREFUL: this removes ALL models and log results of the last run
+    if tf.gfile.Exists(LOGDIR):
+        tf.gfile.DeleteRecursively(LOGDIR)
+    tf.gfile.MakeDirs(LOGDIR)
 
     # hyperparameter search
-    for l2_const in [0.0, 0.005, 0.01]:
-        for lrate in [0.0001, 0.0005, 0.001]:
+    for l2_const in [0.002,0.005]:
+        for lrate in [0.0001,0.00005]:
+            for kprob in [0.8,0.9]:
 
-            hparam = make_hparam_string(kprob=kprob,lrate=lrate,l2_const=l2_const)
-            print('Starting run for %s' % hparam)
+                hparam = make_hparam_string(kprob=kprob,lrate=lrate,l2_const=l2_const)
+                print('Starting run for %s' % hparam)
+                model_path = LOGDIR + hparam + "/model"
 
-            modelstring ='model-fcn-' + hparam
-            model_path = LOGDIR + modelstring + '.ckpt'
+                # OPTIONAL: Train and Inference on the cityscapes dataset instead of the Kitti dataset.
+                # You'll need a GPU with at least 10 teraFLOPS to train on.
+                # https://www.cityscapes-dataset.com/
 
-            # OPTIONAL: Train and Inference on the cityscapes dataset instead of the Kitti dataset.
-            # You'll need a GPU with at least 10 teraFLOPS to train on.
-            #  https://www.cityscapes-dataset.com/
+                tf.reset_default_graph()
+                with tf.Session() as sess:
 
-            tf.reset_default_graph()
-            with tf.Session() as sess:
+                    # Path to vgg model
+                    vgg_path = os.path.join(data_dir, 'vgg')
+                    # Create function to get batches
+                    get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'data_road/training'), image_shape)
 
-                # Path to vgg model
-                vgg_path = os.path.join(data_dir, 'vgg')
-                # Create function to get batches
-                get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'data_road/training'), image_shape)
+                    # OPTIONAL: Augment Images for better results
+                    #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
-                # OPTIONAL: Augment Images for better results
-                #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
+                    # TODO: Build NN using load_vgg, layers, and optimize function
+                    input_image, keep_prob, vgg_layer3_out, vgg_layer4_out, vgg_layer7_out = load_vgg(sess, vgg_path)
+                    nn_last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes)
 
-                # TODO: Build NN using load_vgg, layers, and optimize function
-                input_image, keep_prob, vgg_layer3_out, vgg_layer4_out, vgg_layer7_out = load_vgg(sess, vgg_path)
-                nn_last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes)
+                    learning_rate = tf.placeholder(dtype = tf.float32)
+                    correct_label = tf.placeholder(dtype = tf.float32, shape = (None, None, None, num_classes))
 
-                learning_rate = tf.placeholder(dtype = tf.float32)
-                correct_label = tf.placeholder(dtype = tf.float32, shape = (None, None, None, num_classes))
+                    logits, train_op, cross_entropy_loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes, l2_const)
 
-                logits, train_op, cross_entropy_loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes,l2_const)
+                    # 'Saver' op to save and restore all the variables
+                    saver = tf.train.Saver()
 
-                # 'Saver' op to save and restore all the variables
-                saver = tf.train.Saver()
-                # TODO: Train NN using the train_nn function
-                sess.run(tf.global_variables_initializer())
-                train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
-                     correct_label, keep_prob, learning_rate, kprob, lrate, hparam)
+                    # TODO: Train NN using the train_nn function
+                    sess.run(tf.global_variables_initializer())
+                    train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
+                         correct_label, keep_prob, learning_rate, kprob, lrate, hparam)
 
-                save_path = saver.save(sess, model_path)
-                print("Model saved in file: %s" % save_path)
+                    save_path = saver.save(sess, model_path)
+                    print("Model saved in file: %s" % save_path)
 
-                # TODO: Save inference data using helper.save_inference_samples
-                helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+                    # TODO: Save inference data using helper.save_inference_samples
+                    helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
 
 if __name__ == '__main__':

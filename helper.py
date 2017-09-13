@@ -103,7 +103,7 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
     Generate test output using the test images
     :param sess: TF session
     :param logits: TF Tensor for the logits
-    :param keep_prob: TF Placeholder for the dropout keep robability
+    :param keep_prob: TF Placeholder for the dropout keep probability
     :param image_pl: TF Placeholder for the image placeholder
     :param data_folder: Path to the folder that contains the datasets
     :param image_shape: Tuple - Shape of image
