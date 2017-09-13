@@ -11,6 +11,7 @@ In this project the pixels of a road in images are labelled using a Fully Convol
 [video1]: ./images/project_video.mp4
 
 Some of the results are shown below:
+
 ![sample][image1]
 ![sample][image2]
 ![sample][image3]
@@ -18,6 +19,7 @@ Some of the results are shown below:
 
 
 A sample video can be found here
+
 ![sample][video1]
 
 ### Setup
