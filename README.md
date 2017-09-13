@@ -19,7 +19,7 @@ Some of the results are shown below:
 ![sample][image3]
 ![sample][image4]
 
-The code performs a hapyerparameter search using 200 epochs for training.
+The code performs a hyperparameter search using 200 epochs for training each network. 
 A test of the trained network on road conditions very different to the training data can be found here [project_video](./images/project_video.mp4)
 
 ### Setup
